@@ -1,0 +1,91 @@
+// 기존의 script 태그 내용을 이 코드로 교체하세요
+
+const gameContainer = document.getElementById('gameContainer');
+const timerElement = document.getElementById('timer');
+const remainingPointsElement = document.getElementById('remainingPoints');
+const playerPositionElement = document.getElementById('playerPosition');
+const commandListElement = document.getElementById('commandList');
+const micStatusElement = document.getElementById('micStatus');
+let points = [];
+let playerPosition = { x: 1, y: 1 };
+let timer;
+let startTime;
+let commandIndex = 1;
+let gameStarted = false;
+
+// ... (이전의 다른 함수들은 그대로 유지) ...
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = new SpeechRecognition();
+recognition.continuous = true;
+recognition.interimResults = true;
+recognition.lang = 'ko-KR';
+
+function startSpeechRecognition() {
+    recognition.start();
+    micStatusElement.textContent = "마이크 상태: 활성화";
+}
+
+recognition.onstart = function() {
+    console.log("음성 인식이 시작되었습니다.");
+    micStatusElement.textContent = "마이크 상태: 활성화";
+};
+
+let lastProcessedResult = '';
+
+recognition.onresult = function(event) {
+    const result = event.results[event.results.length - 1];
+    if (result.isFinal) {
+        processVoiceCommand(result[0].transcript.trim());
+    } else {
+        // 중간 결과 처리
+        const interimTranscript = result[0].transcript.trim();
+        if (interimTranscript !== lastProcessedResult) {
+            processVoiceCommand(interimTranscript);
+            lastProcessedResult = interimTranscript;
+        }
+    }
+};
+
+function processVoiceCommand(command) {
+    console.log("인식된 음성:", command);
+    
+    const directionMap = {
+        '위': '위',
+        '아래': '아래',
+        '왼쪽': '왼쪽',
+        '오른쪽': '오른쪽'
+    };
+    
+    const numberMap = {
+        '한': 1, '두': 2, '세': 3, '네': 4, '다섯': 5,
+        '여섯': 6, '일곱': 7, '여덟': 8, '아홉': 9, '열': 10
+    };
+
+    const regex = /(위|아래|왼쪽|오른쪽)(?:으로)?\s*(한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|\d+)?\s*(?:칸|간)?/;
+    const matches = command.match(regex);
+
+    if (matches) {
+        const direction = directionMap[matches[1]];
+        let steps = 1;
+        if (matches[2]) {
+            steps = numberMap[matches[2]] || parseInt(matches[2]) || 1;
+        }
+        movePlayer(direction, steps);
+        addCommandToHistory(command);
+    }
+}
+
+recognition.onerror = function(event) {
+    console.error("음성 인식 오류: ", event.error);
+    micStatusElement.textContent = "마이크 상태: 오류 발생";
+};
+
+recognition.onend = function() {
+    console.log("음성 인식이 중단되었습니다. 재시작합니다.");
+    if (gameStarted) {
+        recognition.start();
+    }
+};
+
+// ... (나머지 함수들은 그대로 유지) ...
